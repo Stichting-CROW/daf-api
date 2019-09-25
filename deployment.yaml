@@ -1,0 +1,41 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: daf-api
+spec:
+  selector:
+    app: daf-api
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: daf-api
+  labels:
+    app: daf-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: daf-api
+  template:
+    metadata:
+      labels:
+        app: daf-api
+    spec:
+      containers:
+        - name: daf-api
+          image: registry.gitlab.com/dynamischanoniemfietsregister/daf_api:1.0 
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: daf-secrets
+                  key: db_password
+            - name: IP
+              value: 10.133.75.95
+            - name: TZ
+              value: Europe/Amsterdam
