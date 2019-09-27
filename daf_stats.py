@@ -11,6 +11,7 @@ def get_number_of_bikes_registered_in_total(conn):
     cur.execute(stmt)
     data = serialize_number_of_bikes_registered_in_total(cur.fetchall())
     cur.close()
+    conn.commit()
     return data
 
 
@@ -41,6 +42,7 @@ def get_number_of_bikes_in_depot(conn):
     """
     cur.execute(stmt)
     data = serialize_number_of_bikes_in_depot(cur.fetchall())
+    conn.commit()
     cur.close()
     return data
 
@@ -79,6 +81,7 @@ def get_stats_checkx(conn):
     """
     cur.execute(stmt)
     data = serialize_stats_checkx(cur.fetchall())
+    conn.commit()
     cur.close()
     return data
 
