@@ -1,6 +1,6 @@
 
 
-def get_number_of_bikes_registered_in_total(conn):
+def get_number_of_bikes_registered_in_total(conn, gm_code):
     cur = conn.cursor()
     stmt = """
     SELECT brand, count(*) as number_of_bikes_registered
@@ -26,7 +26,7 @@ def serialize_number_of_bikes_registered_in_total(data):
     result["stats"] = results
     return results
 
-def get_number_of_bikes_in_depot(conn):
+def get_number_of_bikes_in_depot(conn, gm_code):
     cur = conn.cursor()
     stmt = """
     SELECT brand, count(*) as number_of_bikes, EXTRACT(epoch from avg(in_depot_duration)) / (3600*24) as average_days_in_depot
@@ -34,13 +34,15 @@ def get_number_of_bikes_in_depot(conn):
     JOIN
     (SELECT bike_id, (NOW() - timestamp) as in_depot_duration
     FROM events
+    JOIN depot
+    ON events.depot_id = depot.depot_id
     WHERE event_id IN (select max(event_id) as max_event_id from events group by bike_id)
-    AND event_type = 'check_in_depot') as bikes_in_depot
+    AND event_type = 'check_in_depot' AND municipality_code = %s) as bikes_in_depot
     ON bike.bike_id = bikes_in_depot.bike_id
     GROUP BY brand
     ORDER BY number_of_bikes DESC;
     """
-    cur.execute(stmt)
+    cur.execute(stmt, (gm_code,))
     data = serialize_number_of_bikes_in_depot(cur.fetchall())
     conn.commit()
     cur.close()
@@ -58,7 +60,7 @@ def serialize_number_of_bikes_in_depot(data):
     result["stats"] = results
     return results
 
-def get_stats_checkx(conn):
+def get_stats_checkx(conn, gm_code):
     cur = conn.cursor()
     stmt = """
     SELECT day::date, coalesce(number_of_checkins, 0) as number_of_checkins,
@@ -67,19 +69,25 @@ def get_stats_checkx(conn):
     LEFT JOIN
     (SELECT timestamp::date as date, count(*) as number_of_checkins
     FROM events
+    JOIN depot
+    ON events.depot_id = depot.depot_id
     WHERE event_type = 'check_in_depot'
+    AND municipality_code = %s
     GROUP BY timestamp::date
     ORDER BY date) as q1
     ON day = q1.date
     LEFT JOIN
     (SELECT timestamp::date as date, count(*) as number_of_checkouts
     FROM events
+    JOIN depot
+    ON events.depot_id = depot.depot_id
     WHERE event_type = 'check_out_depot'
+    AND municipality_code = %s
     GROUP BY timestamp::date
     ORDER BY date) as q2
     ON day = q2.date;
     """
-    cur.execute(stmt)
+    cur.execute(stmt, (gm_code, gm_code,))
     data = serialize_stats_checkx(cur.fetchall())
     conn.commit()
     cur.close()
